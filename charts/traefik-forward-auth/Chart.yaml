@@ -11,7 +11,7 @@ sources:
   - https://github.com/thomseddon/traefik-forward-auth
 
 maintainers:
-  - name: Kelvin Law
+  - name: kelvl
 
 type: application
 version: 0.1.0
