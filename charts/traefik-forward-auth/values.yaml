@@ -1,4 +1,4 @@
-# The follow is mapped directly to 
+# The follow is mapped directly to
 # https://github.com/thomseddon/traefik-forward-auth#configuration
 
 config:
@@ -18,18 +18,18 @@ config:
   secret: "XXXXXX"
   whitelist: []
   rules: {}
-    # name: 
-    #   action: 
+    # name:
+    #   action:
     #   provider:
     #   rule:
   providers:
     google:
       # this must be enabled if google provider is the default
-      enabled: true 
+      enabled: true
       clientID: "XXXX"
       clientSecret: "XXXXX"
       prompt: ""
-    oidc: 
+    oidc:
       enabled: false
       issuerUrl: ""
       clientID: ""
@@ -53,7 +53,7 @@ fullnameOverride: ""
 podSecurityContext: {}
   # fsGroup: 2000
 
-securityContext: 
+securityContext:
   # capabilities:
   #   drop:
   #   - ALL
