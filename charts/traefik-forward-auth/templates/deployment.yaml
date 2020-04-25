@@ -1,0 +1,149 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "traefik-forward-auth.fullname" . }}
+  labels:
+    {{- include "traefik-forward-auth.labels" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "traefik-forward-auth.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      annotations:
+        checksum/secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        checksum/google-secret: {{ include (print $.Template.BasePath "/google-secret.yaml") . | sha256sum }}
+        checksum/oidc-secret: {{ include (print $.Template.BasePath "/oidc-secret.yaml") . | sha256sum }}
+      labels:
+        {{- include "traefik-forward-auth.selectorLabels" . | nindent 8 }}
+    spec:
+    {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+          {{- range $key, $value := .Values.extraArgs }}
+            {{- if $value }}
+            - --{{ $key }}={{ $value }}
+            {{- else }}
+            - --{{ $key }}
+            {{- end }}
+          {{- end }}
+          {{- with .Values.config }}
+          {{- if .authHost }}
+            - --auth-host={{ .authHost }}
+          {{- end }}
+          {{- range .cookieDomain }}
+            - --cookie-domain={{ . }}
+          {{- end }}
+          {{- if .insecureCookie }}
+            - --insecure-cookie
+          {{- end }}
+          {{- if .cookieName }}
+            - --cookie-name={{ .cookieName }}
+          {{- end }}
+          {{- if .csrfCookieName }}
+            - --csrf-cookie-name={{ .csrfCookieName }}
+          {{- end }}
+          {{- if .defaultAction }}
+            - --default-action={{ .defaultAction }}
+          {{- end }}
+          {{- if .defaultProvider }}
+            - --default-provider={{ .defaultProvider }}
+          {{- end }}
+          {{- range .domain }}
+            - --domain={{ . }}
+          {{- end }}
+          {{- if .lifetime }}
+            - --lifetime={{ .lifetime }}
+          {{- end }}
+          {{- range .whitelist }}
+            - --whitelist={{ . }}
+          {{- end }}
+          {{- range $ruleName, $ruleProps := .rules }}
+          {{- if $ruleProps.action }}
+            - --rule.{{ $ruleName }}.action={{ $ruleProps.action }}
+          {{- end }}
+          {{- if $ruleProps.provider }}
+            - --rule.{{ $ruleName }}.provider={{ $ruleProps.provider }}
+          {{- end }}
+          {{- if $ruleProps.rule }}
+            - --rule.{{ $ruleName }}.rule={{ $ruleProps.rule }}
+          {{- end }}
+          {{- end }}
+          {{- end }}
+          env:
+            - name: SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "traefik-forward-auth.fullname" . }}
+                  key: secret
+            {{- if .Values.config.providers.google.enabled }}
+            - name: PROVIDERS_GOOGLE_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "traefik-forward-auth.fullname" . }}-google
+                  key: client-id
+            - name: PROVIDERS_GOOGLE_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "traefik-forward-auth.fullname" . }}-google
+                  key: client-secret
+            - name: PROVIDERS_GOOGLE_CLIENT_PROMPT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "traefik-forward-auth.fullname" . }}-google
+                  key: prompt
+            {{- end }}
+            {{- if .Values.config.providers.oidc.enabled }}
+            - name: PROVIDERS_OIDC_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "traefik-forward-auth.fullname" . }}-oidc
+                  key: client-id
+            - name: PROVIDERS_OIDC_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "traefik-forward-auth.fullname" . }}-oidc
+                  key: client-secret
+            - name: PROVIDERS_OIDC_CLIENT_ISSUER_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "traefik-forward-auth.fullname" . }}-oidc
+                  key: issuer-url
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: 4181
+              protocol: TCP
+          livenessProbe:
+            tcpSocket:
+              port: 4181
+            initialDelaySeconds: 20
+            failureThreshold: 3
+            successThreshold: 1
+            periodSeconds: 10
+            timeoutSeconds: 2
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
+    {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+    {{- end }}
