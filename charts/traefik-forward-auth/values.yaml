@@ -43,7 +43,7 @@ extraEnv: []
 replicaCount: 1
 
 image:
-  repository: thomseddon/traefik-forward-auth
+  repository: thomseddon/traefik-forward-aut
   pullPolicy: IfNotPresent
 
 imagePullSecrets: []
